@@ -9,11 +9,14 @@ import com.zacarias.modelos.LoginUsuario;
 import com.zacarias.modelos.Usuario;
 import com.zacarias.servicios.ServicioUsuario;
 
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
 
 @Controller
 public class ControladorUsuario {
@@ -35,7 +38,8 @@ public class ControladorUsuario {
 	@PostMapping("/procesa/registro")
 	public String registrarUsuario(@Valid @ModelAttribute("usuario") Usuario usuarioNuevo,
 								   BindingResult validaciones, 
-								   @ModelAttribute("loginUsuario") LoginUsuario usuarioLogin) {
+								   @ModelAttribute("loginUsuario") LoginUsuario usuarioLogin,
+								   HttpSession sesion) {
 		String nombreUsuario = usuarioNuevo.getNombreUsuario();
 		Usuario usuarioActual = this.servicioUsuario.obtenerUsuarioPorNombreUsuario(nombreUsuario);
 		if (!usuarioNuevo.getContrasenia().equals(usuarioNuevo.getConfirmacionContrasenia())) {
@@ -53,13 +57,22 @@ public class ControladorUsuario {
 		
 		usuarioNuevo.setContrasenia(contraseñaEncriptada);
 		this.servicioUsuario.agregarUsuario(usuarioNuevo);
-		return "inicio.jsp";
+		
+		sesion.setAttribute("idUsuario", usuarioNuevo.getId());
+		sesion.setAttribute("nombreUsuario", usuarioNuevo.getNombreUsuario());
+		sesion.setAttribute("nombre", usuarioNuevo.getNombre());
+		sesion.setAttribute("apellido", usuarioNuevo.getApellido());
+		sesion.setAttribute("correo", usuarioNuevo.getCorreo());
+		sesion.setAttribute("fechaNacimiento", usuarioNuevo.getFechaNacimiento());
+		
+		return "redirect:/inicio";
 	}
 	
 	@PostMapping("/procesa/login")
 	public String loginUsuario(@Valid @ModelAttribute("loginUsuario") LoginUsuario usuarioLogin,
 							   BindingResult validaciones,
-							   @ModelAttribute("usuario") Usuario usuario) {
+							   @ModelAttribute("usuario") Usuario usuario,
+							   HttpSession sesion) {
 		
 		String nombreUsuario = usuarioLogin.getNombreUsuarioLogin();
 		Usuario usuarioActual = this.servicioUsuario.obtenerUsuarioPorNombreUsuario(nombreUsuario);
@@ -74,7 +87,30 @@ public class ControladorUsuario {
 			return "index.jsp";
 
 		}
+		sesion.setAttribute("idUsuario", usuarioActual.getId());
+		sesion.setAttribute("nombreUsuario", usuarioActual.getNombreUsuario());
+		sesion.setAttribute("nombre", usuarioActual.getNombre());
+		sesion.setAttribute("apellido", usuarioActual.getApellido());
+		sesion.setAttribute("correo", usuarioActual.getCorreo());
+		sesion.setAttribute("fechaNacimiento", usuarioActual.getFechaNacimiento());
+		return "redirect:/inicio";
+	}
+	
+	@GetMapping("/inicio")
+	public String desplegarInicio(HttpSession sesion) {
+		if (sesion.getAttribute("idUsuario") == null) {
+			return "redirect:/";
+		}
 		return "inicio.jsp";
 	}
+	
+	@PostMapping("/procesa/logout")
+	public String cerrarSesion(HttpSession sesion) {
+		
+		sesion.invalidate();
+		
+		return "redirect:/";
+	}
+	
 	
 }
